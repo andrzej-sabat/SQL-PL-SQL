@@ -1,0 +1,381 @@
+ //tablespace
+ create tablespace TBS datafile 'tbs01.dbf' size 50M extent management local autoallocate;
+ 
+ 
+//user
+alter session set "_ORACLE_SCRIPT"=true;
+CREATE USER andrzej IDENTIFIED BY andrzej DEFAULT TABLESPACE TBS;
+grant create session to andrzej; 
+
+//tworzenie tabeli TAB1
+CREATE TABLE TAB1(
+id number not null,
+data_danych date,
+nazwa_procesu varchar2(200),
+data_start date,
+status varchar2(100),
+data_koniec date,
+PRIMARY KEY(id));
+
+
+//Insert
+INSERT ALL
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (1,TO_DATE('2019/07/02 08:00:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane1',TO_DATE('2019/07/02 08:01:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (2,TO_DATE('2019/07/02 08:05:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane2',TO_DATE('2019/07/02 08:06:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (3,TO_DATE('2019/07/02 08:05:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane3',TO_DATE('2019/07/02 08:06:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (4,TO_DATE('2019/07/02 08:10:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane4',TO_DATE('2019/07/02 08:11:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (5,TO_DATE('2019/07/02 08:10:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane5',TO_DATE('2019/07/02 08:11:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (6,TO_DATE('2019/07/02 08:10:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane6',TO_DATE('2019/07/02 08:11:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (7,TO_DATE('2019/07/02 08:10:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane7',TO_DATE('2019/07/02 08:11:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (8,TO_DATE('2019/07/02 08:15:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane8',TO_DATE('2019/07/02 08:16:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (9,TO_DATE('2019/07/02 08:15:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane9',TO_DATE('2019/07/02 08:16:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  INTO tab1(id, data_danych, nazwa_procesu, data_start, status, data_koniec) 
+  values (10,TO_DATE('2019/07/02 08:15:00', 'yyyy/mm/dd hh24:mi:ss'),'wf_dane10',TO_DATE('2019/07/02 08:16:00', 'yyyy/mm/dd hh24:mi:ss'),'running',null)
+  SELECT * FROM dual;
+  
+ //Update
+ UPDATE tab1
+SET status = 'succeeded',
+    data_koniec = TO_DATE('2019/07/02 08:02:00', 'yyyy/mm/dd hh24:mi:ss')
+WHERE id = 1;
+
+
+UPDATE tab1
+SET status = 'failed',
+    data_koniec = TO_DATE('2019/07/02 08:25:00', 'yyyy/mm/dd hh24:mi:ss')
+WHERE id = 10;
+
+
+UPDATE tab1
+SET status = 'failed',
+    data_koniec = TO_DATE('2019/07/02 08:30:00', 'yyyy/mm/dd hh24:mi:ss')
+WHERE id = 9;
+
+//Uprawnienia urzytkownika do materialized view
+grant create materialized view to andrzej;
+
+//Materialized view refresh on commit
+create materialized view tab1_mv1 
+refresh on commit 
+as
+  select data_danych, status, count(*) as ile from tab1
+  group by data_danych,status;
+  
+//Materialized view log
+create materialized view log on tab1;
+
+
+//Create Tab2
+create table tab2(
+id number not null,
+tab1_id number,
+imie varchar2(100),
+primary key(id),
+FOREIGN KEY (tab1_id) REFERENCES tab1(id));
+
+
+/////////////////////////////////////////////////////////test1
+DROP MATERIALIZED VIEW test1_test2_mv;
+DROP MATERIALIZED LOG ON test2;
+
+/*Materialize view manually refresh test*/
+
+CREATE TABLE test1(
+col1 NUMBER,
+col2 VARCHAR2(20)
+);
+
+CREATE TABLE test2(
+col3 NUMBER,
+col4 VARCHAR2(20)
+);
+
+INSERT INTO test1
+  VALUES(1,'test1 row 1');
+INSERT INTO test1
+  VALUES(2,'test1 row 2');
+  
+INSERT INTO test2
+  VALUES(1,'test2 row 1');
+INSERT INTO test2
+  VALUES(2,'test2 row 2');
+COMMIT;
+
+/*materialize view logs*/
+CREATE MATERIALIZED VIEW LOG ON test1 WITH ROWID;
+CREATE MATERIALIZED VIEW LOG ON test2 WITH ROWID;
+
+/*materialize view*/
+CREATE MATERIALIZED VIEW test1_test2_mv
+AS
+SELECT t1.col1, t1.col2, t2.col4
+FROM test1 t1, test2 t2
+WHERE t1.col1 = t2.col3;
+
+SELECT * FROM test1_test2_mv;
+
+INSERT INTO test1
+  VALUES(3,'test1 row 3');
+INSERT INTO test2
+  VALUES(3,'test2 row 3');
+COMMIT;
+
+/*manually refresh*/
+EXECUTE dbms_mview.REFRESH('test1_test2_mv','c');
+
+///////////////////////////////////////////////////////////test2
+
+/*Materialize view auto refresh test*/
+CREATE TABLE test3(
+col1 NUMBER,
+col2 VARCHAR2(20)
+);
+
+CREATE TABLE test4(
+col3 NUMBER,
+col4 VARCHAR2(20)
+);
+
+INSERT INTO test3
+  VALUES(1,'test3 row 1');
+INSERT INTO test3
+  VALUES(2,'test3 row 2');
+  
+INSERT INTO test4
+  VALUES(1,'test4 row 1');
+INSERT INTO test4
+  VALUES(2,'test4 row 2');
+COMMIT;
+
+/*materialize view logs*/
+CREATE MATERIALIZED VIEW LOG ON test3 WITH ROWID;
+CREATE MATERIALIZED VIEW LOG ON test4 WITH ROWID;
+
+/*materialize view*/
+CREATE MATERIALIZED VIEW test3_test4_mv_fast
+REFRESH FAST ON COMMIT
+AS
+SELECT t3.col1, t3.col2, t4.col4, t3.ROWID AS rowid_test3, t4.ROWID AS rowid_test4
+FROM test3 t3, test4 t4
+WHERE t3.col1 = t4.col3;
+
+
+
+/*insert some data and commit*/
+INSERT INTO test3
+  VALUES(3,'test3 row 3');
+INSERT INTO into test4
+  VALUES(3,'test4 row 3');
+COMMIT;
+
+/*display view*/
+SELECT * FROM test3_test4_mv_fast;
+
+////////////////////////////////////////////////////////////test3
+
+
+
+/*materialized view aggregation test*/
+CREATE TABLE miasto(
+id NUMBER,
+nazwa VARCHAR2(50),
+ulica VARCHAR2(100),
+PRIMARY KEY (ID));
+
+CREATE TABLE urzad(
+id NUMBER,
+nazwa_urzedu VARCHAR2(50),
+id_miasta NUMBER,
+PRIMARY KEY(id),
+FOREIGN KEY(id_miasta) REFERENCES miasto(id));
+
+INSERT ALL
+  INTO miasto VALUES(1, 'Rzeszow', 'ulica1')
+  INTO miasto VALUES(2, 'Rzeszow', 'ulica2')
+  INTO miasto VALUES(3, 'Rzeszow', 'ulica3')
+  INTO miasto VALUES(4, 'Krakow', 'ulica1')
+  INTO miasto VALUES(5, 'Krakow', 'ulica2')
+  INTO miasto VALUES(6, 'Krakow', 'ulica3')
+SELECT * FROM dual;
+
+INSERT ALL
+  INTO urzad VALUES(1, 'Pierwszy',1)
+  INTO urzad VALUES(2, 'Drugi',1)
+  INTO urzad VALUES(3, 'Trzeci',1)
+  INTO urzad VALUES(4, 'Pierwszy',2)
+  INTO urzad VALUES(5, 'Drugi', 2)
+  INTO urzad VALUES(6, 'Trzeci',2)
+SELECT * FROM dual;
+
+/*materialized view*/
+CREATE MATERIALIZED VIEW agregaty 
+AS
+SELECT m.nazwa , m.ulica , COUNT(u.id)
+FROM miasto m, urzad u
+WHERE m.id = u.id_miasta
+GROUP BY  m.nazwa, m.ulica;
+
+SELECT * FROM agregaty;
+
+INSERT INTO urzad 
+  VALUES(9, 'Piaty',3);
+COMMIT;
+
+EXECUTE dbms_mview.REFRESH('agregaty','c');
+DROP MATERIALIZED VIEW agregaty_fast;
+
+/*materialized view with force refresh on commit*/
+CREATE MATERIALIZED VIEW agregaty_force
+REFRESH FORCE ON COMMIT
+AS
+SELECT m.nazwa , m.ulica , COUNT(u.id)
+FROM miasto m, urzad u
+WHERE m.id = u.id_miasta
+GROUP BY m.nazwa, m.ulica;
+
+/*materialized view logs for fast refreshing*/
+CREATE MATERIALIZED VIEW LOG ON miasto WITH PRIMARY KEY;
+CREATE MATERIALIZED VIEW LOG ON urzad WITH PRIMARY KEY;
+
+DROP MATERIALIZED VIEW LOG urzad;
+
+SELECT * FROM agregaty_fast;
+
+/*materialized view auto refreshed after 5 min*/
+CREATE MATERIALIZED VIEW auto_fast_miasto
+REFRESH FAST 
+START WITH SYSDATE NEXT SYSDATE + 1/1152
+WITH PRIMARY KEY
+AS
+SELECT * FROM miasto;
+
+SELECT * FROM auto_fast_miasto;
+INSERT INTO miasto 
+  VALUES(7,'Warszawa','ulica1');
+COMMIT;
+  
+SELECT * FROM auto_fast_miasto;
+
+
+/////////////////////////////////////////////////////test4
+
+/*QUERY REWRITE TEST*/
+/*Query to test*/
+explain plan set statement_id ='2' for
+select m.nazwa , m.ulica , count(u.id)
+from miasto m, urzad u
+where m.id = u.id_miasta
+group by m.nazwa, m.ulica;
+
+
+/*Display explain plan*/
+SELECT *
+  FROM PLAN_TABLE
+
+CONNECT BY prior id = parent_id
+        AND prior statement_id = statement_id
+  START WITH id = 0
+        AND statement_id = '1'
+  ORDER BY id;
+
+/*materialized view for query test*/ 
+create materialized view agregaty_query_rewrite
+refresh force on commit
+with primary key
+enable query rewrite
+as
+select m.nazwa , m.ulica , count(u.id)
+from miasto m, urzad u
+where m.id = u.id_miasta
+group by m.nazwa, m.ulica;
+
+//////////////////zadalny sys
+create tablespace MV_test datafile 'mv_test.dbf' size 50M extent management local autoallocate;
+
+
+
+create user andrzej identified by andrzej default tablespace MV_test;
+alter session set "_ORACLE_SCRIPT" = true;
+grant create session to andrzej;
+grant create materialized view to andrzej;
+grant create table to andrzej;
+ALTER USER andrzej quota unlimited on mv_test;
+
+/*materialized view aggregation test*/
+CREATE TABLE miasto(
+id NUMBER,
+nazwa VARCHAR2(50),
+ulica VARCHAR2(100),
+PRIMARY KEY (ID));
+
+grant create public database link to andrzej;
+grant create materialized view to andrzej@db_link1;
+
+////////////////////////////zadlny andrzej
+/*materialized view aggregation test*/
+CREATE TABLE miasto(
+id NUMBER,
+nazwa VARCHAR2(50),
+ulica VARCHAR2(100),
+PRIMARY KEY (ID));
+
+INSERT ALL
+  INTO miasto VALUES(1, 'Rzeszow', 'ulica1')
+  INTO miasto VALUES(2, 'Rzeszow', 'ulica2')
+  INTO miasto VALUES(3, 'Rzeszow', 'ulica3')
+  INTO miasto VALUES(4, 'Krakow', 'ulica1')
+  INTO miasto VALUES(5, 'Krakow', 'ulica2')
+  INTO miasto VALUES(6, 'Krakow', 'ulica3')
+SELECT * FROM dual;
+
+create public database link db_link1 connect to andrzej identified by andrzej using 'orcl';
+create materialized view log on miasto;
+
+///////////////////////////////////local andrzej
+create materialized view dblink_mv
+as select * from miasto@db_link1;
+
+CREATE PUBLIC DATABASE LINK PLINK1 CONNECT TO andrzej IDENTIFIED BY andrzej USING 'cdb12c';
+drop public database link plink1;
+
+create public database link db_link1 connect to andrzej identified by andrzej using 'cdb12c';
+
+
+select * from miasto@db_link1;
+
+select * from  dblink_mv;
+
+insert into miasto@db_link1 values(7,'Warszawa','ulica1');
+
+execute dbms_mview.refresh('dblink_mv','c');
+
+create materialized view log on miasto@db_link1;
+
+create materialized view dblink_fast_mv
+refresh fast
+as
+select * from miasto@db_link1;
+
+drop materialized view dblink_fast_mv;
+
+select * from dblink_fast_mv;
+insert into miasto@db_link1 values(8,'Warszawa','ulica2');
+execute dbms_mview.refresh('dblink_fast_mv','f');
+
+create materialized view dblink_commit_mv
+refresh force on commit
+as
+select * from miasto@db_link1;
+
+
+
+  
