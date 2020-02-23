@@ -1,1 +1,1 @@
-# SQL-PL-SQL
+# Repozutorium skryptów SQL, PL/SQL
