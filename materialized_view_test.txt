@@ -60,7 +60,7 @@ SET status = 'failed',
     data_koniec = TO_DATE('2019/07/02 08:30:00', 'yyyy/mm/dd hh24:mi:ss')
 WHERE id = 9;
 
-//Uprawnienia urzytkownika do materialized view
+//Uprawnienia uzytkownika do materialized view
 grant create materialized view to andrzej;
 
 //Materialized view refresh on commit
